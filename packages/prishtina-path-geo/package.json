@@ -1,0 +1,25 @@
+{
+  "name": "prishtina-path-geo",
+  "version": "1.0.0",
+  "description": "Point-in-polygon lookup for PrishtinaPath map export JSON (lat/lng as x/y)",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "prishtina",
+    "polygon",
+    "point-in-polygon",
+    "geojson",
+    "latlng"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "scripts": {
+    "test": "node test-smoke.mjs"
+  }
+}
