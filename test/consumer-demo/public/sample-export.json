@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "exportedAt": "2025-01-01T00:00:00.000Z",
+  "categories": {
+    "1": { "id": 1, "name": "Demo zone", "color": "#2563eb" }
+  },
+  "markers": {
+    "1": { "id": 1, "categoryId": 1, "coords": { "lat": 0, "lng": 0 } },
+    "2": { "id": 2, "categoryId": 1, "coords": { "lat": 0, "lng": 2 } },
+    "3": { "id": 3, "categoryId": 1, "coords": { "lat": 2, "lng": 2 } },
+    "4": { "id": 4, "categoryId": 1, "coords": { "lat": 2, "lng": 0 } }
+  }
+}

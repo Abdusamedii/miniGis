@@ -171,3 +171,5 @@ npm run lint
 ```
 
 Package tests: `cd packages/mini-gis-geo && npm test`.
+
+**Test `mini-gis-geo` like a downstream app** (minimal x/y + JSON file, Vite + `file:` dependency): `cd test/consumer-demo && npm install && npm run dev` — see `test/consumer-demo/README.md`.
