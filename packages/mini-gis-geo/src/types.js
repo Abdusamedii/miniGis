@@ -7,7 +7,7 @@
  *   selectedCategoryId?: number | null;
  *   categories: Record<string, CategoryEntry | Record<string, unknown>>;
  *   markers: Record<string, MarkerEntry | Record<string, unknown>>;
- * }} PrishtinaPathExport
+ * }} MiniGisExport
  */
 
 export {}

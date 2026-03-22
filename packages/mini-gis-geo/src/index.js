@@ -1,5 +1,5 @@
 /**
- * PrishtinaPath export JSON: categories + markers; polygons are marker rings per category
+ * miniGis export JSON: categories + markers; polygons are marker rings per category
  * (marker ids ascending), matching the web app’s WorldMap / categoryRings behavior.
  */
 
@@ -77,9 +77,9 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
 
 /**
  * @param {unknown} raw
- * @returns {import('./types.js').PrishtinaPathExport}
+ * @returns {import('./types.js').MiniGisExport}
  */
-export function parsePrishtinaPathExport(raw) {
+export function parseMiniGisExport(raw) {
   let data = raw
   if (typeof raw === 'string') {
     try {
@@ -102,12 +102,12 @@ export function parsePrishtinaPathExport(raw) {
     throw new Error('Missing or invalid "markers" object')
   }
 
-  return /** @type {import('./types.js').PrishtinaPathExport} */ (data)
+  return /** @type {import('./types.js').MiniGisExport} */ (data)
 }
 
 /**
  * Marker entries for one category, sorted by marker id (ascending) — same ring order as the app.
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @param {number} categoryId
  * @returns {Array<{ id: number; lat: number; lng: number }>}
  */
@@ -135,7 +135,7 @@ export function getSortedMarkersForCategory(data, categoryId) {
 /**
  * Closed polygon vertices as x/y (lng/lat). Requires at least 3 markers; fewer return null
  * (same as no fillable area in the app for <3 points).
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @param {number} categoryId
  * @returns {XYPoint[] | null}
  */
@@ -147,7 +147,7 @@ export function getCategoryPolygonXY(data, categoryId) {
 
 /**
  * All category ids present in the export (from `categories` keys / ids).
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @returns {number[]}
  */
 export function getCategoryIds(data) {
@@ -164,7 +164,7 @@ export function getCategoryIds(data) {
 /**
  * @param {number} lat
  * @param {number} lng
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @returns {number[]} category ids whose polygon contains the point (ascending id order)
  */
 export function findCategoriesContainingPoint(lat, lng, data) {
@@ -183,7 +183,7 @@ export function findCategoriesContainingPoint(lat, lng, data) {
  * Implemented as `findCategoriesContainingPoint(lat, lng, data).length > 0`.
  * @param {number} lat
  * @param {number} lng
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @returns {boolean}
  */
 export function checkIfInAnyPolygon(lat, lng, data) {
@@ -194,7 +194,7 @@ export function checkIfInAnyPolygon(lat, lng, data) {
  * First matching category id, or null.
  * @param {number} lat
  * @param {number} lng
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @returns {number | null}
  */
 export function findFirstCategoryContainingPoint(lat, lng, data) {
@@ -206,7 +206,7 @@ export function findFirstCategoryContainingPoint(lat, lng, data) {
  * Nearest marker in the export to (lat, lng), by {@link haversineMeters}.
  * @param {number} lat
  * @param {number} lng
- * @param {import('./types.js').PrishtinaPathExport} data
+ * @param {import('./types.js').MiniGisExport} data
  * @returns {{ markerId: number; categoryId: number; distanceMeters: number; coords: { lat: number; lng: number } } | null}
  */
 export function findNearestPoint(lat, lng, data) {

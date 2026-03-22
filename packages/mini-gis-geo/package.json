@@ -1,7 +1,7 @@
 {
-  "name": "prishtina-path-geo",
-  "version": "1.0.0",
-  "description": "Point-in-polygon lookup for PrishtinaPath map export JSON (lat/lng as x/y)",
+  "name": "mini-gis-geo",
+  "version": "1.0.1",
+  "description": "Point-in-polygon lookup for miniGis map export JSON (lat/lng as x/y)",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -11,7 +11,7 @@
     "src"
   ],
   "keywords": [
-    "prishtina",
+    "minigis",
     "polygon",
     "point-in-polygon",
     "geojson",

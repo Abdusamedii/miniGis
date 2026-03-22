@@ -6,7 +6,7 @@ import {
   haversineMeters,
   isPointInPolygon,
   latLngToXY,
-  parsePrishtinaPathExport,
+  parseMiniGisExport,
 } from './src/index.js'
 
 const sample = {
@@ -24,7 +24,7 @@ const sample = {
   },
 }
 
-parsePrishtinaPathExport(sample)
+parseMiniGisExport(sample)
 const inside = findCategoriesContainingPoint(1, 1, sample)
 assert.deepEqual(inside, [1])
 assert.equal(checkIfInAnyPolygon(1, 1, sample), true)
@@ -57,4 +57,4 @@ const emptyMarkers = {
 }
 assert.equal(findNearestPoint(0, 0, emptyMarkers), null)
 
-console.log('prishtina-path-geo smoke OK')
+console.log('mini-gis-geo smoke OK')

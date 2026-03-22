@@ -4,7 +4,7 @@ import { markerStore } from '../services/markerStore.js'
 const EXPORT_VERSION = 1
 
 /**
- * Same shape as parsed export JSON (for tools like `prishtina-path-geo`).
+ * Same shape as parsed export JSON (for tools like `mini-gis-geo`).
  * @param {Map<number, { lat: number; lng: number; categoryId: number }>} markersById
  * @param {Map<number, { id: number; name: string; color: string }>} categoriesById
  * @param {number | null} selectedCategoryId
@@ -69,7 +69,7 @@ export function markersMapToJSON(
 export function downloadMarkersJSON(
   markersById,
   categoriesById,
-  filename = 'prishtina-path-export.json',
+  filename = 'mini-gis-export.json',
 ) {
   const json = markersMapToJSON(
     markersById,

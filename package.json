@@ -1,5 +1,5 @@
 {
-  "name": "prishtinapath",
+  "name": "minigis",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "prishtina-path-geo": "workspace:*",
+    "mini-gis-geo": "workspace:*",
     "leaflet": "^1.9.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

@@ -1,4 +1,4 @@
-# PrishtinaPath
+# miniGis
 
 ## Why this exists
 
@@ -9,11 +9,11 @@ Typical situations:
 - You offer a service **only in certain parts of a country** (for example only inside the city of **Ferizaj**). When someone requests the service, you need to know if they are **inside** or **outside** the area you serve, and optionally **how far** they are from your boundary or from a reference point, so you can show a clear message (“we don’t serve this location yet”, “you’re inside the service zone”, etc.).
 - In larger cities you might split the map into **neighbourhoods or zones**. You can attach **category metadata** (name, colour, and anything you encode in your workflow) so that—for example—**delivery workers** see which neighbourhood or zone a job belongs to, or your backend can route logic by zone.
 
-The **web app** is the **editor**: you draw regions on a world map and export **one JSON file** that describes your zones. The **`prishtina-path-geo`** **package** is the **runtime library**: you add it to your server or client app, load that JSON, and call small functions to answer “is this GPS point inside my zone?”, “which zone?”, “how far is the nearest boundary marker?”, and so on.
+The **web app** is the **editor**: you draw regions on a world map and export **one JSON file** that describes your zones. The **`mini-gis-geo`** **package** is the **runtime library**: you add it to your server or client app, load that JSON, and call small functions to answer “is this GPS point inside my zone?”, “which zone?”, “how far is the nearest boundary marker?”, and so on.
 
 ---
 
-## Part 1: The PrishtinaPath web app
+## Part 1: The miniGis web app
 
 **What it does**
 
@@ -33,7 +33,7 @@ The **web app** is the **editor**: you draw regions on a world map and export **
 
 ---
 
-## Part 2: The `prishtina-path-geo` package
+## Part 2: The `mini-gis-geo` package
 
 **What it does**
 
@@ -60,7 +60,7 @@ The library builds **one ring per category** from markers sharing that `category
 
 ## Package API: each function and when to use it
 
-### `parsePrishtinaPathExport(raw)`
+### `parseMiniGisExport(raw)`
 
 - **Input:** JSON string or already-parsed object.
 - **Output:** Validated export object (throws if `categories` / `markers` are missing).
@@ -124,48 +124,112 @@ The library builds **one ring per category** from markers sharing that `category
 
 ---
 
-## How to install and use the package
+## Step-by-step: use `mini-gis-geo` in another project
 
-### Install
+Follow these steps in **your** app (Node, a bundled frontend, React Native with a JS runtime, etc.). The library is **ESM** (`"type": "module"` in the package).
 
-From the monorepo root (this project), the app already depends on the workspace package:
+### Step 1 — Install the package
+
+**Inside this monorepo**, the app uses the workspace alias:
 
 ```json
-"prishtina-path-geo": "workspace:*"
+"mini-gis-geo": "workspace:*"
 ```
 
-In **another** project, either publish `packages/prishtina-path-geo` to npm and install by name, or install from disk:
+**In a separate project**, either publish `packages/mini-gis-geo` to npm and run `npm install mini-gis-geo`, or install the folder from disk:
 
 ```bash
-npm install /path/to/PrishtinaPath/packages/prishtina-path-geo
+npm install /absolute/or/relative/path/to/miniGis/packages/mini-gis-geo
 ```
 
-### Use in code (ESM)
+### Step 2 — Import the functions you need
+
+Use named imports from the package entry (see [Package API](#package-api-each-function-and-when-to-use-it) for the full list):
 
 ```js
 import {
-  parsePrishtinaPathExport,
+  parseMiniGisExport,
   checkIfInAnyPolygon,
   findFirstCategoryContainingPoint,
   findNearestPoint,
-} from 'prishtina-path-geo'
+} from 'mini-gis-geo'
+```
 
-// Load your JSON (fetch, fs.readFile + JSON.parse, import assertion, etc.)
-const data = parsePrishtinaPathExport(jsonStringOrObject)
+### Step 3 — Load the JSON your editor exported
 
+You must end up with either a **string** or a **parsed object** that matches the [JSON shape](#json-shape-what-the-app-exports) (`categories` + `markers`).
+
+**Node (read a file once at startup):**
+
+```js
+import { readFileSync } from 'node:fs'
+
+const jsonString = readFileSync(new URL('./zones.json', import.meta.url), 'utf8')
+```
+
+**Browser or any environment with `fetch`:**
+
+```js
+const res = await fetch('/zones.json')
+const jsonString = await res.text()
+// or: const raw = await res.json()  — you can pass the object straight to parseMiniGisExport
+```
+
+**Bundlers (optional):** if your toolchain supports JSON import, you can `import raw from './zones.json' assert { type: 'json' }` (syntax varies by bundler) and pass `raw` to `parseMiniGisExport`.
+
+### Step 4 — Parse and validate the export
+
+Call **`parseMiniGisExport`** once. It accepts a JSON string or an already-parsed object, checks that `categories` and `markers` exist, and returns the same object typed for the rest of the API. It **throws** if the payload is invalid.
+
+```js
+const data = parseMiniGisExport(jsonString)
+// or: parseMiniGisExport(alreadyParsedObject)
+```
+
+Keep `data` in memory (module singleton, React context, server cache, etc.) and reuse it for every location check.
+
+### Step 5 — Call the geo helpers with a GPS fix
+
+Pass **latitude**, **longitude**, and the parsed **`data`** (order is always `lat`, `lng`, `data` for the high-level helpers):
+
+```js
 const lat = 42.123456
 const lng = 21.123456
 
 const served = checkIfInAnyPolygon(lat, lng, data)
+
 const zoneId = findFirstCategoryContainingPoint(lat, lng, data)
 const zoneName =
   zoneId != null ? data.categories[String(zoneId)]?.name : null
 
 const nearest = findNearestPoint(lat, lng, data)
-// nearest?.distanceMeters, nearest?.categoryId, …
+// nearest is null if there are no markers; else nearest.distanceMeters, nearest.categoryId, …
 ```
 
-Your product logic can then branch on `served`, show `zoneName` to staff or customers, and use `nearest` for distance or diagnostics.
+From here, branch on `served`, show `zoneName` to users or staff, and use `nearest` for distance or diagnostics. For overlap cases or multiple zones, use `findCategoriesContainingPoint` (documented above).
+
+### Minimal end-to-end example (Node)
+
+```js
+import { readFileSync } from 'node:fs'
+import {
+  parseMiniGisExport,
+  checkIfInAnyPolygon,
+  findFirstCategoryContainingPoint,
+} from 'mini-gis-geo'
+
+const raw = readFileSync('./zones.json', 'utf8')
+const data = parseMiniGisExport(raw)
+
+const lat = 42.123456
+const lng = 21.123456
+
+console.log('in service area:', checkIfInAnyPolygon(lat, lng, data))
+console.log(
+  'zone:',
+  findFirstCategoryContainingPoint(lat, lng, data),
+)
+```
 
 ---
 
@@ -178,4 +242,4 @@ npm run build
 npm run lint
 ```
 
-The package tests live under `packages/prishtina-path-geo` (`npm test` inside that folder).
+The package tests live under `packages/mini-gis-geo` (`npm test` inside that folder).

@@ -8,8 +8,8 @@ import {
   getSortedMarkersForCategory,
   isPointInPolygon,
   latLngToXY,
-  parsePrishtinaPathExport,
-} from 'prishtina-path-geo'
+  parseMiniGisExport,
+} from 'mini-gis-geo'
 
 /**
  * @param {number} n
@@ -34,7 +34,7 @@ function formatFindNearestResult(nearest) {
  * Multi-line description for the UI. Function names are wrapped in **...** for bold rendering.
  * @param {number} lat
  * @param {number} lng
- * @param {object} data parsed export (same shape as parsePrishtinaPathExport output)
+ * @param {object} data parsed export (same shape as parseMiniGisExport output)
  * @returns {string}
  */
 export function buildMethodDescriptionForProbe(lat, lng, data) {
@@ -48,7 +48,7 @@ export function buildMethodDescriptionForProbe(lat, lng, data) {
 
   /** @type {string[]} */
   const lines = [
-    'How this probe was evaluated (prishtina-path-geo):',
+    'How this probe was evaluated (mini-gis-geo):',
     '',
     `• **checkIfInAnyPolygon**(lat, lng, data) → ${inAny}`,
     '',
@@ -62,7 +62,7 @@ export function buildMethodDescriptionForProbe(lat, lng, data) {
     '',
     `• **getCategoryIds**(data) → ${JSON.stringify(getCategoryIds(data))}`,
     '',
-    `• **parsePrishtinaPathExport**(rawExport) → ${categoryCount} categories, ${markerCount} markers loaded`,
+    `• **parseMiniGisExport**(rawExport) → ${categoryCount} categories, ${markerCount} markers loaded`,
     '',
     'Per category:',
   ]
@@ -105,14 +105,14 @@ export function buildMethodDescriptionForProbe(lat, lng, data) {
  */
 
 /**
- * Point-in-polygon probe aligned with prishtina-path-geo (rings need ≥3 markers per category).
+ * Point-in-polygon probe aligned with mini-gis-geo (rings need ≥3 markers per category).
  * @param {number} lat
  * @param {number} lng
  * @param {unknown} rawExport from getProjectExportObject in markersJson.js
  * @returns {ProbeAnalysisResult}
  */
 export function analyzeProbeAt(lat, lng, rawExport) {
-  const data = parsePrishtinaPathExport(rawExport)
+  const data = parseMiniGisExport(rawExport)
   const insideAnyPolygon = checkIfInAnyPolygon(lat, lng, data)
   const categoryId = findFirstCategoryContainingPoint(lat, lng, data)
   const nearestPoint = findNearestPoint(lat, lng, data)
