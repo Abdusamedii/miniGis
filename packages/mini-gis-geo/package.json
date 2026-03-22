@@ -21,5 +21,8 @@
   "sideEffects": false,
   "scripts": {
     "test": "node test-smoke.mjs"
+  },
+  "dependencies": {
+    "mini-gis-geo": "file:"
   }
 }

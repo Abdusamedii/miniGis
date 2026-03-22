@@ -1,112 +1,99 @@
 # mini-gis-geo
 
-Point-in-polygon and distance helpers for **miniGis** map export JSON: categories plus markers with `lat` / `lng`. No map UI—pure functions for Node or any ESM JavaScript runtime.
+## 1. Create the JSON
 
-Designed for JSON exported from the [miniGis](https://github.com/Abdusamedii/miniGis) editor (or any object with the same `categories` / `markers` shape).
+Open **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)**, draw your zones (categories + markers), then save/download the JSON file. That export is what this package reads.
 
-## Install
+## 2. Install in your project
 
 ```bash
 npm install mini-gis-geo
 ```
 
-This package is **ESM only** (`"type": "module"`). Use `import`, not `require`.
+The package is **ESM only** — use `import`, not `require`.
 
-## Quick start
+Load the file (string or object), parse once, then call the functions below:
 
 ```js
 import { readFileSync } from 'node:fs'
-import {
-  parseMiniGisExport,
-  checkIfInAnyPolygon,
-  findFirstCategoryContainingPoint,
-} from 'mini-gis-geo'
+import { parseMiniGisExport, checkIfInAnyPolygon } from 'mini-gis-geo'
 
-const raw = readFileSync('./zones.json', 'utf8')
-const data = parseMiniGisExport(raw)
-
-const lat = 42.123456
-const lng = 21.123456
-
-const served = checkIfInAnyPolygon(lat, lng, data)
-const zoneId = findFirstCategoryContainingPoint(lat, lng, data)
-const zoneName =
-  zoneId != null ? data.categories[String(zoneId)]?.name : null
+const data = parseMiniGisExport(readFileSync('./zones.json', 'utf8'))
 ```
 
-## Export JSON shape
+## 3. What each function does
 
-The parser expects an object with at least:
-
-| Field | Description |
-| --- | --- |
-| `categories` | Record of id (string key) → `{ id, name, color, ... }` |
-| `markers` | Record of id (string key) → `{ id, categoryId, coords: { lat, lng } }` |
-
-Optional top-level fields (e.g. `version`, `exportedAt`, `selectedCategoryId`) are ignored by the geo logic but preserved on the parsed object.
-
-**Rings:** For each `categoryId`, markers are ordered by **ascending marker `id`** to form one closed ring. **At least three** markers per category are required for polygon containment; fewer yield no fillable area for hit tests.
-
-## API
+Call these in order when you’re learning the API: first parse and inspect the export, then geometry helpers, then point tests and distances.
 
 ### `parseMiniGisExport(raw)`
 
-- **Input:** JSON string or already-parsed object.
-- **Output:** The same object after validating `categories` and `markers`.
-- **Throws** if JSON is invalid or required fields are missing.
-
-Call once when loading your file; pass the result as `data` to everything below.
+1. You pass a **JSON string** or an **already-parsed object** from the editor export.
+2. It checks that `categories` and `markers` exist and are objects.
+3. It returns that object as `data` for every other function, or **throws** if the payload is invalid.
 
 ### `getCategoryIds(data)`
 
-Sorted array of numeric category ids present in `categories`.
+1. Scans `data.categories`.
+2. Returns a **sorted array of numeric category ids** so you can list zones or loop over them.
 
 ### `getSortedMarkersForCategory(data, categoryId)`
 
-Markers for that category, sorted by marker id (ring order).
+1. Collects every marker whose `categoryId` matches.
+2. Sorts them by **marker id ascending** (same ring order as the editor).
+3. Returns `{ id, lat, lng }[]` for that category.
 
 ### `getCategoryPolygonXY(data, categoryId)`
 
-Vertices as `{ x, y }` with `x = lng`, `y = lat`, or `null` if fewer than three markers.
+1. Uses `getSortedMarkersForCategory` for that category.
+2. If there are **fewer than three** markers, returns **`null`** (no closed polygon).
+3. Otherwise returns an array of `{ x, y }` with **`x = lng`**, **`y = lat`** for the closed ring.
 
-### `latLngToXY(lat, lng)` / `isPointInPolygon(point, polygon)`
+### `latLngToXY(lat, lng)`
 
-- `latLngToXY` maps a WGS84 point to the plane used internally (`x` = longitude, `y` = latitude).
-- `isPointInPolygon` is ray-casting on an array of `{ x, y }` in order.
+1. Maps one GPS point to the **same plane** the library uses for polygons: `{ x: lng, y: lat }`.
+2. Use this when you compare a location to rings yourself.
+
+### `isPointInPolygon(point, polygon)`
+
+1. **`point`** is `{ x, y }`; **`polygon`** is an array of `{ x, y }` vertices in order.
+2. Uses ray casting and returns **`true`** if the point is inside, **`false`** if not.
+3. Low-level helper; category helpers below build the polygon for you.
 
 ### `findCategoriesContainingPoint(lat, lng, data)`
 
-All category ids whose polygon contains the point (ascending id order). Can be empty or multiple if zones overlap.
+1. For each category, builds the ring (if it has ≥3 markers) and tests the point.
+2. Returns **all category ids** whose polygon contains `(lat, lng)`, **sorted ascending**.
+3. Can be an **empty array** or **several ids** if zones overlap.
 
 ### `checkIfInAnyPolygon(lat, lng, data)`
 
-`true` if the point lies inside at least one category polygon.
+1. Runs the same containment logic as `findCategoriesContainingPoint`.
+2. Returns **`true`** if the point is inside **at least one** polygon, else **`false`**.
 
 ### `findFirstCategoryContainingPoint(lat, lng, data)`
 
-First matching category id, or `null`. When several polygons contain the point, this is the **lowest** category id among matches.
+1. Calls `findCategoriesContainingPoint` and takes the **first** id in that array.
+2. If none match, returns **`null`**.
+3. When multiple zones overlap, the **smallest category id** wins (because the list is sorted).
 
-### `toRad(deg)` / `haversineMeters(lat1, lng1, lat2, lng2)`
+### `toRad(deg)`
 
-Radians helper and great-circle distance in **meters** between two WGS84 points.
+1. Converts **degrees to radians** (`deg * π / 180`).
+2. Helper for `haversineMeters` if you need angles yourself.
+
+### `haversineMeters(lat1, lng1, lat2, lng2)`
+
+1. Computes **great-circle distance in meters** between two WGS84 points.
+2. Does not use the export JSON — only the four numbers.
 
 ### `findNearestPoint(lat, lng, data)`
 
-Nearest marker in the export by Haversine distance:  
-`{ markerId, categoryId, distanceMeters, coords }` or `null` if there are no markers.
+1. Loops **all markers** in `data.markers`.
+2. Picks the marker with smallest **Haversine** distance to `(lat, lng)` (tie-break: lower marker id).
+3. Returns **`{ markerId, categoryId, distanceMeters, coords }`** or **`null`** if there are no markers.
 
-## Limitations
+---
 
-Containment uses **latitude and longitude as Cartesian x/y** (lng → x, lat → y). That matches the miniGis editor preview and is reasonable for **city-scale** zones. It is **not** a full spherical polygon library; for large geographic areas consider a dedicated GIS stack.
+**Note:** Inside/outside tests treat **lat/lng as x/y on a plane** (city-scale zones). Not a full spherical GIS library.
 
-## Development
-
-From this package directory:
-
-```bash
-npm test
-```
-
-## License
-
-MIT
+License: MIT
