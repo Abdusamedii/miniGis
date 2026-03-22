@@ -1,10 +1,25 @@
 # miniGis
 
-Monorepo: hosted map editor + **`mini-gis-geo`** on npm. Below is the full workflow for using the library.
+Monorepo: hosted map editor + **`mini-gis-geo`** on npm.
+
+## Why this exists
+
+This project helps you define **where** your product or service applies on a map, then **check a user’s real-world position** against those regions in your own application.
+
+Typical situations:
+
+- You offer a service **only in certain parts of a country** (for example only inside a specific city or district). When someone requests the service, you need to know if they are **inside** or **outside** the area you serve, and optionally **how far** they are from your boundary or from a reference point, so you can show a clear message (“we don’t serve this location yet”, “you’re inside the service zone”, etc.).
+- In larger cities you might split the map into **neighbourhoods or zones**. You can attach **category metadata** (name, colour, and anything you encode in your workflow) so that—for example—**delivery workers** see which neighbourhood or zone a job belongs to, or your backend can route logic by zone.
+
+The **hosted editor** at **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)** lets you draw those regions and export **one JSON file**. The **`mini-gis-geo`** package is the **runtime library**: you add it to your server or client app, **load that JSON once**, and call small functions to answer “is this GPS point inside my zone?”, “which zone?”, “how far is the nearest boundary marker?”, and so on—**no map UI required** in production.
+
+---
 
 ## 1. Create the JSON
 
-Open **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)**, draw your zones (categories + markers), then save/download the JSON file. That export is what **`mini-gis-geo`** reads.
+Open **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)**, draw your zones (categories + markers), then save/download the JSON file. That file is the contract between the editor and **`mini-gis-geo`**.
+
+---
 
 ## 2. Install in your project
 
@@ -14,16 +29,62 @@ npm install mini-gis-geo
 
 The package is **ESM only** — use `import`, not `require`.
 
-Load the file (string or object), parse once, then call the functions below:
+**This monorepo** can depend on the workspace package with `"mini-gis-geo": "workspace:*"` instead of npm.
+
+---
+
+## Example: use the export in your application
+
+Put the JSON you downloaded from the site next to your code (for example `config/service-zones.json`), or load it from a URL/CDN. **Parse it once** when your process or bundle starts, then reuse the parsed object for every location check.
 
 ```js
 import { readFileSync } from 'node:fs'
-import { parseMiniGisExport, checkIfInAnyPolygon } from 'mini-gis-geo'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import {
+  parseMiniGisExport,
+  checkIfInAnyPolygon,
+  findFirstCategoryContainingPoint,
+} from 'mini-gis-geo'
 
-const data = parseMiniGisExport(readFileSync('./zones.json', 'utf8'))
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// One-time init: load the JSON you exported from https://abdusamedii.github.io/miniGis/
+const zonesData = parseMiniGisExport(
+  readFileSync(join(__dirname, 'config', 'service-zones.json'), 'utf8'),
+)
+
+/** Call from your API, job worker, or any code that has a user GPS fix */
+export function evaluateUserLocation(lat, lng) {
+  const served = checkIfInAnyPolygon(lat, lng, zonesData)
+  const categoryId = findFirstCategoryContainingPoint(lat, lng, zonesData)
+  const zoneName =
+    categoryId != null
+      ? zonesData.categories[String(categoryId)]?.name ?? null
+      : null
+
+  return {
+    served,
+    categoryId,
+    zoneName,
+    message: served
+      ? zoneName
+        ? `Inside zone: ${zoneName}`
+        : 'Inside service area'
+      : 'Outside service area',
+  }
+}
+
+// Example: Express-style handler
+// app.post('/check-location', (req, res) => {
+//   const { lat, lng } = req.body
+//   res.json(evaluateUserLocation(lat, lng))
+// })
 ```
 
-**This monorepo** can depend on the workspace package with `"mini-gis-geo": "workspace:*"` instead of npm.
+In the browser, skip `readFileSync`: `fetch('/service-zones.json')` then `parseMiniGisExport(await res.text())` (or pass `await res.json()`), store the result in a module variable or React context, and call `checkIfInAnyPolygon` / `findFirstCategoryContainingPoint` whenever you have a new position.
+
+---
 
 ## 3. What each function does
 

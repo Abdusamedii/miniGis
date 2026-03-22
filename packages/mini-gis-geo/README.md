@@ -1,8 +1,25 @@
 # mini-gis-geo
 
+Point-in-polygon and distance helpers for **miniGis** map export JSON. Use it in Node or any ESM JavaScript runtime.
+
+## Why this exists
+
+This stack helps you define **where** your product or service applies on a map, then **check a user’s real-world position** against those regions in **your** application.
+
+Typical situations:
+
+- You offer a service **only in certain parts of a country** (for example only inside a specific city or district). When someone requests the service, you need to know if they are **inside** or **outside** the area you serve, and optionally **how far** they are from your boundary or from a reference point, so you can show a clear message (“we don’t serve this location yet”, “you’re inside the service zone”, etc.).
+- In larger cities you might split the map into **neighbourhoods or zones**. You can attach **category metadata** (name, colour, and anything you encode in your workflow) so that—for example—**delivery workers** see which neighbourhood or zone a job belongs to, or your backend can route logic by zone.
+
+Use the **hosted editor** at **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)** to draw regions and export **one JSON file**. Install **`mini-gis-geo`**, **load that JSON once**, and use the functions below to answer location questions—**no map UI** in your production app.
+
+---
+
 ## 1. Create the JSON
 
-Open **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)**, draw your zones (categories + markers), then save/download the JSON file. That export is what this package reads.
+Open **[https://abdusamedii.github.io/miniGis/](https://abdusamedii.github.io/miniGis/)**, draw your zones (categories + markers), then save/download the JSON file. That file is what this package reads.
+
+---
 
 ## 2. Install in your project
 
@@ -12,14 +29,54 @@ npm install mini-gis-geo
 
 The package is **ESM only** — use `import`, not `require`.
 
-Load the file (string or object), parse once, then call the functions below:
+---
+
+## Example: use the export in your application
+
+Put the JSON you downloaded from the site next to your code (for example `config/service-zones.json`), or host it and fetch it. **Parse it once** at startup, then reuse the parsed object for every location check.
 
 ```js
 import { readFileSync } from 'node:fs'
-import { parseMiniGisExport, checkIfInAnyPolygon } from 'mini-gis-geo'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import {
+  parseMiniGisExport,
+  checkIfInAnyPolygon,
+  findFirstCategoryContainingPoint,
+} from 'mini-gis-geo'
 
-const data = parseMiniGisExport(readFileSync('./zones.json', 'utf8'))
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// One-time init: JSON from https://abdusamedii.github.io/miniGis/
+const zonesData = parseMiniGisExport(
+  readFileSync(join(__dirname, 'config', 'service-zones.json'), 'utf8'),
+)
+
+/** Use from your API, worker, or any code that has a user GPS fix */
+export function evaluateUserLocation(lat, lng) {
+  const served = checkIfInAnyPolygon(lat, lng, zonesData)
+  const categoryId = findFirstCategoryContainingPoint(lat, lng, zonesData)
+  const zoneName =
+    categoryId != null
+      ? zonesData.categories[String(categoryId)]?.name ?? null
+      : null
+
+  return {
+    served,
+    categoryId,
+    zoneName,
+    message: served
+      ? zoneName
+        ? `Inside zone: ${zoneName}`
+        : 'Inside service area'
+      : 'Outside service area',
+  }
+}
 ```
+
+In the browser: `fetch('/service-zones.json')` then `parseMiniGisExport(await res.text())` (or pass `await res.json()`), keep `zonesData` in memory, and call the geo helpers whenever you have a new `lat`/`lng`.
+
+---
 
 ## 3. What each function does
 
